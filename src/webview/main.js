@@ -118,6 +118,15 @@
   function render() {
     const { start, end } = visibleRange();
     while (rowsEl.firstChild) rowsEl.removeChild(rowsEl.firstChild);
+
+    if (filteredEntries.length === 0 && !isLoading) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.textContent = 'No entries match the current filters';
+      rowsEl.appendChild(empty);
+      return;
+    }
+
     for (let i = start; i < end; i++) {
       rowsEl.appendChild(buildRow(filteredEntries[i], i));
     }
@@ -181,6 +190,15 @@
       const expanded = expandedIds.has(entry.id);
       toggle.textContent = (expanded ? '\u25BC' : '\u25BA') + ' Stack trace';
       toggle.addEventListener('click', () => toggleExpand(entry.id));
+      toggle.setAttribute('role', 'button');
+      toggle.setAttribute('tabindex', '0');
+      toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      toggle.addEventListener('keydown', (/** @type {KeyboardEvent} */ ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          toggleExpand(entry.id);
+        }
+      });
       row.appendChild(toggle);
 
       if (expanded) {
