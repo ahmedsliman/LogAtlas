@@ -68,49 +68,55 @@ export class LogLensEditorProvider implements vscode.CustomTextEditorProvider {
         highWaterMark: CHUNK_SIZE,
       });
 
-      let buffer = '';
-      let isFirst = true;
+      let lineBuffer = '';
       let entryId = 0;
       let lineNumber = 1;
       let format: LogFormat = 'unknown';
-      let sampleLines: string[] | null = [];
+      let pendingLines: string[] = [];
+      let formatDetected = false;
 
-      stream.on('data', (chunk: string | Buffer) => {
-        const chunkStr = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
-        buffer += chunkStr;
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-
-        if (sampleLines !== null) {
-          sampleLines.push(...lines);
-          if (sampleLines.length >= 20) {
-            format = detectFormat(sampleLines);
-            sampleLines = null;
-          }
-        }
-
+      const processLines = (lines: string[]): LogEntry[] => {
+        if (lines.length === 0) return [];
         const { entries } = parseLog(lines.join('\n'), format);
         entries.forEach(e => {
           e.id = entryId++;
           e.lineNumber = e.lineNumber + lineNumber - 1;
         });
         lineNumber += lines.length;
+        return entries;
+      };
 
-        if (isFirst) {
-          webview.postMessage({ type: 'init', entries, format, totalLines: -1 });
-          isFirst = false;
+      stream.on('data', (chunk: string | Buffer) => {
+        const chunkStr = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
+        lineBuffer += chunkStr;
+        const lines = lineBuffer.split('\n');
+        lineBuffer = lines.pop() ?? '';
+
+        if (!formatDetected) {
+          pendingLines.push(...lines);
+          if (pendingLines.length >= 20) {
+            format = detectFormat(pendingLines);
+            formatDetected = true;
+            const entries = processLines(pendingLines);
+            pendingLines = [];
+            webview.postMessage({ type: 'init', entries, format, totalLines: -1 });
+          }
+          // else: keep buffering until format is known
         } else {
+          const entries = processLines(lines);
           webview.postMessage({ type: 'append', entries });
         }
       });
 
       stream.on('end', () => {
-        if (buffer.trim()) {
-          const { entries } = parseLog(buffer, format);
-          entries.forEach(e => {
-            e.id = entryId++;
-            e.lineNumber += lineNumber - 1;
-          });
+        if (!formatDetected) {
+          // Entire file had fewer than 20 complete lines
+          if (lineBuffer.trim()) pendingLines.push(lineBuffer);
+          format = detectFormat(pendingLines);
+          const entries = processLines(pendingLines);
+          webview.postMessage({ type: 'init', entries, format, totalLines: -1 });
+        } else if (lineBuffer.trim()) {
+          const entries = processLines([lineBuffer]);
           webview.postMessage({ type: 'append', entries });
         }
         webview.postMessage({ type: 'done' });
