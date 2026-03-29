@@ -180,7 +180,7 @@
       toggle.className = 'log-context-toggle';
       const expanded = expandedIds.has(entry.id);
       toggle.textContent = (expanded ? '\u25BC' : '\u25BA') + ' Stack trace';
-      toggle.addEventListener('click', () => toggleExpand(entry.id, idx));
+      toggle.addEventListener('click', () => toggleExpand(entry.id));
       row.appendChild(toggle);
 
       if (expanded) {
@@ -226,8 +226,10 @@
   }
 
   // ── Expand / collapse ────────────────────────────────────────────────────
-  /** @param {number} id @param {number} idx */
-  function toggleExpand(id, idx) {
+  /** @param {number} id */
+  function toggleExpand(id) {
+    const idx = filteredEntries.findIndex(e => e.id === id);
+    if (idx === -1) return;
     if (expandedIds.has(id)) {
       expandedIds.delete(id);
       heights[idx] = DEFAULT_H;
