@@ -1,0 +1,74 @@
+{
+  "name": "logatlas",
+  "displayName": "LogAtlas",
+  "description": "Fast, filterable log viewer for PHP/web developers. Supports Laravel, Nginx, and Apache logs.",
+  "version": "0.1.2",
+  "publisher": "logatlas",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ahmedsliman/LogAtlas"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "log",
+    "laravel",
+    "nginx",
+    "apache",
+    "viewer",
+    "php"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "logatlas.logViewer",
+        "displayName": "LogAtlas Viewer",
+        "selector": [
+          {
+            "filenamePattern": "*.log"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "commands": [
+      {
+        "command": "logatlas.openAsText",
+        "title": "LogAtlas: Open as Plain Text",
+        "icon": "$(go-to-file)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "logatlas.openAsText",
+          "when": "activeCustomEditorId == logatlas.logViewer",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "jest",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.7.1",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.3.0"
+  }
+}

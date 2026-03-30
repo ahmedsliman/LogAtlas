@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Compiled output
+out/
+coverage/
+
+# Packaged extension
+*.vsix
+
+# VS Code
+.vscode/
+.vscode-test/
+
+# Claude Code internals
+.claude/
+prompt.md
+docs/superpowers/
+
+# Internal dev files
+SPEC.md
+PUBLISHING.md
+Makefile
+
+# OS files
+.DS_Store
+Thumbs.db

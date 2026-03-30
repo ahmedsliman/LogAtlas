@@ -1,0 +1,75 @@
+[2026-03-29 14:05:12] production.INFO: Application booting — config cached
+[2026-03-29 14:05:13] production.DEBUG: Database connection established {host: 127.0.0.1, port: 3306, db: loglens_app}
+[2026-03-29 14:05:13] production.INFO: Route cache loaded — 142 routes registered
+[2026-03-29 14:05:14] production.INFO: Queue worker started on connection redis, queue: default
+[2026-03-29 14:05:22] production.DEBUG: Cache hit for key user_preferences:1042
+[2026-03-29 14:05:23] production.INFO: User authenticated {user_id: 1042, email: alice@example.com, ip: 192.168.1.50}
+[2026-03-29 14:05:24] production.NOTICE: Deprecated API endpoint called: GET /api/v1/users (use /api/v2/users)
+[2026-03-29 14:05:31] production.DEBUG: Cache miss for key product_catalog:electronics — fetching from DB
+[2026-03-29 14:05:32] production.INFO: Product catalog query completed in 245ms — 1,204 results
+[2026-03-29 14:05:45] production.WARNING: Rate limit approaching for IP 10.0.0.88 — 92/100 requests in current window
+[2026-03-29 14:06:01] production.INFO: Scheduled task invoice:generate started
+[2026-03-29 14:06:03] production.WARNING: Slow query detected (1,832ms): SELECT * FROM orders WHERE created_at > ? AND status = 'pending' ORDER BY total DESC
+[2026-03-29 14:06:18] production.ERROR: Payment processing failed for order #8842 — gateway timeout
+[Stripe\Exception\ApiConnectionException] cURL error 28: Connection timed out after 30001 milliseconds
+#0 /var/www/app/Services/PaymentService.php(87): Stripe\HttpClient\CurlClient->request()
+#1 /var/www/app/Services/PaymentService.php(42): App\Services\PaymentService->chargeCard()
+#2 /var/www/app/Http/Controllers/CheckoutController.php(65): App\Services\PaymentService->process()
+#3 /var/www/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): App\Http\Controllers\CheckoutController->store()
+#4 /var/www/vendor/laravel/framework/src/Illuminate/Routing/Router.php(513): call_user_func()
+[2026-03-29 14:06:19] production.INFO: Payment retry queued for order #8842 — attempt 1 of 3
+[2026-03-29 14:06:33] production.NOTICE: Feature flag toggled: dark_mode_v2 enabled for 25% of users
+[2026-03-29 14:06:45] production.DEBUG: Redis PING — latency 2ms
+[2026-03-29 14:07:02] production.INFO: Email dispatched to queue: welcome_email for user 1043
+[2026-03-29 14:07:15] production.WARNING: Disk usage at 82% on volume /data — threshold is 80%
+[2026-03-29 14:07:22] production.INFO: File uploaded: invoice_8841.pdf (2.4 MB) to s3://loglens-storage/invoices/
+[2026-03-29 14:07:30] production.ERROR: Failed to send welcome email to user 1043
+[Swift_TransportException] Expected response code 250 but got code 421: 421 Too many connections
+#0 /var/www/vendor/swiftmailer/swiftmailer/lib/classes/Swift/Transport/AbstractSmtpTransport.php(383): Swift_Transport_AbstractSmtpTransport->assertResponseCode()
+#1 /var/www/vendor/swiftmailer/swiftmailer/lib/classes/Swift/Transport/AbstractSmtpTransport.php(281): Swift_Transport_AbstractSmtpTransport->executeCommand()
+#2 /var/www/vendor/laravel/framework/src/Illuminate/Mail/Transport/Transport.php(50): Swift_Transport_AbstractSmtpTransport->send()
+[2026-03-29 14:07:31] production.INFO: Retry scheduled for welcome email — user 1043, delay 60s
+[2026-03-29 14:07:45] production.DEBUG: Session garbage collection — removed 38 expired sessions
+[2026-03-29 14:08:00] production.INFO: Healthcheck OK — response time 12ms
+[2026-03-29 14:08:10] production.CRITICAL: Database connection pool exhausted — max 50 connections reached
+[PDOException] SQLSTATE[HY000] [1040] Too many connections
+#0 /var/www/vendor/laravel/framework/src/Illuminate/Database/Connectors/Connector.php(70): PDO->__construct()
+#1 /var/www/vendor/laravel/framework/src/Illuminate/Database/Connectors/MySqlConnector.php(24): Illuminate\Database\Connectors\Connector->createConnection()
+#2 /var/www/vendor/laravel/framework/src/Illuminate/Database/DatabaseManager.php(164): Illuminate\Database\Connectors\MySqlConnector->connect()
+#3 /var/www/vendor/laravel/framework/src/Illuminate/Database/DatabaseManager.php(79): Illuminate\Database\DatabaseManager->makeConnection()
+[2026-03-29 14:08:11] production.ALERT: Auto-scaling triggered — requesting 2 additional database read replicas
+[2026-03-29 14:08:22] production.WARNING: JWT token expiring in 5 minutes for user 1042 — refresh recommended
+[2026-03-29 14:08:30] production.INFO: User 1042 token refreshed successfully
+[2026-03-29 14:08:45] production.DEBUG: Broadcasting event OrderStatusUpdated to channel private-user.1042
+[2026-03-29 14:09:01] production.INFO: Cron job reports:daily completed in 4.2s — 12 reports generated
+[2026-03-29 14:09:15] production.NOTICE: API versioning: client using Accept header api-version=2024-01 (latest is 2026-03)
+[2026-03-29 14:09:30] production.INFO: Payment retry succeeded for order #8842 — amount $149.99
+[2026-03-29 14:09:31] production.DEBUG: Webhook dispatched to https://hooks.example.com/orders — payload 1.2 KB
+[2026-03-29 14:09:45] production.INFO: Search index updated — 47 documents reindexed in 890ms
+[2026-03-29 14:10:00] production.WARNING: Memory usage at 412 MB — approaching 512 MB limit
+[2026-03-29 14:10:15] production.INFO: Background job ProcessRefund completed — order #8801, amount $32.50
+[2026-03-29 14:10:30] production.ERROR: Elasticsearch cluster health RED — node es-node-3 unreachable
+[Elasticsearch\Common\Exceptions\NoNodesAvailableException] No alive nodes found in your cluster
+#0 /var/www/vendor/elasticsearch/elasticsearch/src/Elasticsearch/Transport.php(94): Elasticsearch\Transport->performRequest()
+#1 /var/www/vendor/elasticsearch/elasticsearch/src/Elasticsearch/Client.php(1576): Elasticsearch\Transport->performRequest()
+#2 /var/www/app/Services/SearchService.php(34): Elasticsearch\Client->search()
+[2026-03-29 14:10:31] production.WARNING: Search fallback activated — using database LIKE queries
+[2026-03-29 14:10:45] production.INFO: User 1044 registered via OAuth provider: google
+[2026-03-29 14:11:00] production.DEBUG: Config reload — .env checksum unchanged, skipping
+[2026-03-29 14:11:15] production.INFO: PDF export completed: monthly_report_2026_03.pdf (48 pages, 3.1 MB)
+[2026-03-29 14:11:30] production.EMERGENCY: Uncaught exception in request lifecycle — returning 500
+[RuntimeException] Undefined property: App\Models\Invoice::$total_amount (possible migration mismatch)
+#0 /var/www/app/Models/Invoice.php(45): App\Models\Invoice->calculateTax()
+#1 /var/www/app/Http/Controllers/InvoiceController.php(28): App\Models\Invoice->getFormattedTotal()
+#2 /var/www/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): App\Http\Controllers\InvoiceController->show()
+#3 /var/www/vendor/laravel/framework/src/Illuminate/Routing/Router.php(513): call_user_func()
+#4 /var/www/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(176): Illuminate\Routing\Router->dispatch()
+[2026-03-29 14:11:31] production.CRITICAL: Request 500 — POST /invoices/8843/preview — user 1042
+[2026-03-29 14:11:45] production.INFO: Maintenance mode check — status: OFF
+[2026-03-29 14:12:00] production.DEBUG: Horizon dashboard accessed by user 1001 (admin)
+[2026-03-29 14:12:15] production.INFO: Batch import started — processing 5,000 product records from CSV
+[2026-03-29 14:12:30] production.WARNING: 23 rows skipped during import — validation errors (see batch log)
+[2026-03-29 14:12:45] production.INFO: Batch import completed — 4,977 products created/updated
+[2026-03-29 14:13:00] production.INFO: Telescope pruning — deleted 12,400 entries older than 48h
+[2026-03-29 14:13:15] production.DEBUG: Broadcast connection keepalive sent — 142 active WebSocket clients
+[2026-03-29 14:13:30] production.INFO: Deployment marker: v3.14.2 — commit abc1234

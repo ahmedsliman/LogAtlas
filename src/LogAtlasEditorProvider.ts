@@ -7,7 +7,7 @@ import { LogEntry, LogFormat } from './types';
 const CHUNK_THRESHOLD = 5 * 1024 * 1024; // 5 MB
 const CHUNK_SIZE      = 512 * 1024;       // 512 KB
 
-export class LogLensEditorProvider implements vscode.CustomTextEditorProvider {
+export class LogAtlasEditorProvider implements vscode.CustomTextEditorProvider {
   constructor(private readonly context: vscode.ExtensionContext) {}
 
   async resolveCustomTextEditor(
@@ -144,7 +144,7 @@ export class LogLensEditorProvider implements vscode.CustomTextEditorProvider {
     content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="${stylesUri}" rel="stylesheet">
-  <title>LogLens</title>
+  <title>LogAtlas</title>
 </head>
 <body>
   <div id="filter-bar">
