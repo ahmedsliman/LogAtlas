@@ -12,6 +12,7 @@ demo/**
 **/*.test.js
 PUBLISHING.md
 CONTRIBUTING.md
+ROADMAP.md
 SPEC.md
 prompt.md
 .claude/**

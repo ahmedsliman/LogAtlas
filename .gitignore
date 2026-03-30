@@ -20,6 +20,7 @@ docs/superpowers/
 # Internal dev files
 SPEC.md
 PUBLISHING.md
+ROADMAP.md
 Makefile
 
 # OS files

@@ -54,11 +54,7 @@ More formats coming — see the roadmap below.
 
 ## Roadmap
 
-- [ ] Nginx and Apache **error** log parsers
-- [ ] **Jump to source line** — open the raw file at the matching line number
-- [ ] **Export filtered view** — copy visible entries to clipboard or file
-- [ ] **Custom parser support** — define your own regex-based format
-- [ ] **Multi-file correlation** — link entries across access and error logs by timestamp
+See [ROADMAP.md](ROADMAP.md).
 
 ---
 

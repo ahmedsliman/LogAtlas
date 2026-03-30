@@ -22,7 +22,11 @@ export class LogAtlasEditorProvider implements vscode.CustomTextEditorProvider {
     };
     webviewPanel.webview.html = this.buildHtml(webviewPanel.webview);
 
+    let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+    let activeGeneration = 0;
+
     const sendContent = async (): Promise<void> => {
+      const myGeneration = ++activeGeneration;
       const filePath = document.uri.fsPath;
       let stat: fs.Stats;
       try {
@@ -32,8 +36,9 @@ export class LogAtlasEditorProvider implements vscode.CustomTextEditorProvider {
       }
 
       if (stat.size > CHUNK_THRESHOLD) {
-        await this.streamFile(filePath, webviewPanel.webview);
+        await this.streamFile(filePath, webviewPanel.webview, () => myGeneration !== activeGeneration);
       } else {
+        if (myGeneration !== activeGeneration) return;
         const content = document.getText();
         const { entries, format } = parseLog(content);
         webviewPanel.webview.postMessage({
@@ -55,13 +60,25 @@ export class LogAtlasEditorProvider implements vscode.CustomTextEditorProvider {
 
     const watcher = vscode.workspace.onDidChangeTextDocument(e => {
       if (e.document.uri.toString() === document.uri.toString()) {
-        sendContent();
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          void sendContent().catch(err => {
+            webviewPanel.webview.postMessage({ type: 'error', message: String(err) });
+          });
+        }, 300);
       }
     });
-    webviewPanel.onDidDispose(() => watcher.dispose());
+    webviewPanel.onDidDispose(() => {
+      watcher.dispose();
+      clearTimeout(debounceTimer);
+    });
   }
 
-  private async streamFile(filePath: string, webview: vscode.Webview): Promise<void> {
+  private async streamFile(
+    filePath: string,
+    webview: vscode.Webview,
+    isCancelled: () => boolean = () => false,
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
       const stream = fs.createReadStream(filePath, {
         encoding: 'utf8',
@@ -87,6 +104,7 @@ export class LogAtlasEditorProvider implements vscode.CustomTextEditorProvider {
       };
 
       stream.on('data', (chunk: string | Buffer) => {
+        if (isCancelled()) { stream.destroy(); return; }
         const chunkStr = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
         lineBuffer += chunkStr;
         const lines = lineBuffer.split('\n');
@@ -99,31 +117,42 @@ export class LogAtlasEditorProvider implements vscode.CustomTextEditorProvider {
             formatDetected = true;
             const entries = processLines(pendingLines);
             pendingLines = [];
-            webview.postMessage({ type: 'init', entries, format, totalLines: -1 });
+            if (!isCancelled()) {
+              webview.postMessage({ type: 'init', entries, format, totalLines: -1 });
+            }
           }
           // else: keep buffering until format is known
         } else {
           const entries = processLines(lines);
-          webview.postMessage({ type: 'append', entries });
+          if (!isCancelled()) {
+            webview.postMessage({ type: 'append', entries });
+          }
         }
       });
 
       stream.on('end', () => {
-        if (!formatDetected) {
-          // Entire file had fewer than 20 complete lines
-          if (lineBuffer.trim()) pendingLines.push(lineBuffer);
-          format = detectFormat(pendingLines);
-          const entries = processLines(pendingLines);
-          webview.postMessage({ type: 'init', entries, format, totalLines: -1 });
-        } else if (lineBuffer.trim()) {
-          const entries = processLines([lineBuffer]);
-          webview.postMessage({ type: 'append', entries });
+        if (!isCancelled()) {
+          if (!formatDetected) {
+            // Entire file had fewer than 20 complete lines
+            if (lineBuffer.trim()) pendingLines.push(lineBuffer);
+            format = detectFormat(pendingLines);
+            const entries = processLines(pendingLines);
+            webview.postMessage({ type: 'init', entries, format, totalLines: -1 });
+          } else if (lineBuffer.trim()) {
+            const entries = processLines([lineBuffer]);
+            webview.postMessage({ type: 'append', entries });
+          }
+          webview.postMessage({ type: 'done' });
         }
-        webview.postMessage({ type: 'done' });
         resolve();
       });
 
-      stream.on('error', reject);
+      stream.on('close', () => resolve()); // resolves the promise when stream.destroy() is called early
+
+      stream.on('error', (err) => {
+        if (isCancelled()) { resolve(); return; }
+        reject(err);
+      });
     });
   }
 

@@ -38,6 +38,10 @@ export function parseLog(
       return { entries: parseNginxAccess(content), format: 'nginx-access' };
     case 'apache-access':
       return { entries: parseApacheAccess(content), format: 'apache-access' };
+    case 'nginx-error':
+      return { entries: [], format: 'nginx-error' };
+    case 'apache-error':
+      return { entries: [], format: 'apache-error' };
     default:
       return { entries: parseLaravel(content), format: 'unknown' };
   }
