@@ -25,6 +25,9 @@
   let filterSearch = '';
   let filterHours  = 0;
   let newestTimestamp = 0;
+  let filterMode       = 'relative'; // 'relative' | 'custom'
+  let filterRangeStart = 0;          // ms epoch, 0 = no lower bound
+  let filterRangeEnd   = 0;          // ms epoch, 0 = no upper bound
 
   // ── DOM refs ────────────────────────────────────────────────────────────
   const scrollerEl  = /** @type {HTMLElement} */ (document.getElementById('scroller-container'));
@@ -34,6 +37,11 @@
   const searchInput = /** @type {HTMLInputElement} */ (document.getElementById('search-input'));
   const timeSel     = /** @type {HTMLSelectElement} */ (document.getElementById('time-filter'));
   const statusBar   = /** @type {HTMLElement} */ (document.getElementById('status-bar'));
+  const timeBtnEl1m    = /** @type {HTMLElement} */    (document.getElementById('time-btn-1m'));
+  const timeBtnEl5m    = /** @type {HTMLElement} */    (document.getElementById('time-btn-5m'));
+  const customRangeBar = /** @type {HTMLElement} */    (document.getElementById('custom-range-bar'));
+  const rangeStartEl   = /** @type {HTMLInputElement} */(document.getElementById('range-start'));
+  const rangeEndEl     = /** @type {HTMLInputElement} */(document.getElementById('range-end'));
 
   // ── Filter helpers ────────────────────────────────────────────────────────────
   /** @param {any} e @param {number} cutoff */
@@ -46,9 +54,14 @@
         (e.ip      && e.ip.toLowerCase().includes(filterSearch));
       if (!hit) return false;
     }
-    if (filterHours > 0) {
+    if (filterMode === 'relative' && filterHours > 0) {
       if (!e.timestamp) return false;
       if (new Date(e.timestamp).getTime() < cutoff) return false;
+    } else if (filterMode === 'custom') {
+      if (!e.timestamp) return false;
+      const t = new Date(e.timestamp).getTime();
+      if (filterRangeStart > 0 && t < filterRangeStart) return false;
+      if (filterRangeEnd   > 0 && t > filterRangeEnd)   return false;
     }
     return true;
   }
@@ -65,11 +78,12 @@
 
   // ── Filtering ────────────────────────────────────────────────────────────
   function applyFilters() {
-    const cutoff = filterHours > 0
-      ? (newestTimestamp > 0
-          ? newestTimestamp - filterHours * 3_600_000
-          : Date.now()   - filterHours * 3_600_000)
-      : 0;
+    let cutoff = 0;
+    if (filterMode === 'relative' && filterHours > 0) {
+      cutoff = newestTimestamp > 0
+        ? newestTimestamp - filterHours * 3_600_000
+        : Date.now()     - filterHours * 3_600_000;
+    }
     filteredEntries = allEntries.filter(e => matchesFilters(e, cutoff));
     rebuildHeights();
     render();
@@ -289,7 +303,50 @@
   });
 
   timeSel.addEventListener('change', () => {
-    filterHours = parseInt(timeSel.value, 10) || 0;
+    setActiveTimeBtn(null);
+    if (timeSel.value === '-1') {
+      filterMode  = 'custom';
+      filterHours = 0;
+      customRangeBar.style.display = 'flex';
+    } else {
+      filterMode  = 'relative';
+      filterHours = parseInt(timeSel.value, 10) || 0;
+      customRangeBar.style.display = 'none';
+    }
+    applyFilters();
+  });
+
+  rangeStartEl.addEventListener('change', () => {
+    filterRangeStart = rangeStartEl.value ? new Date(rangeStartEl.value).getTime() : 0;
+    applyFilters();
+  });
+
+  rangeEndEl.addEventListener('change', () => {
+    filterRangeEnd = rangeEndEl.value ? new Date(rangeEndEl.value).getTime() : 0;
+    applyFilters();
+  });
+
+  /** @param {HTMLElement|null} activeBtn */
+  function setActiveTimeBtn(activeBtn) {
+    [timeBtnEl1m, timeBtnEl5m].forEach(b => b.classList.remove('active'));
+    if (activeBtn) activeBtn.classList.add('active');
+  }
+
+  timeBtnEl1m.addEventListener('click', () => {
+    filterMode  = 'relative';
+    filterHours = 1 / 60;
+    timeSel.value = '0';
+    customRangeBar.style.display = 'none';
+    setActiveTimeBtn(timeBtnEl1m);
+    applyFilters();
+  });
+
+  timeBtnEl5m.addEventListener('click', () => {
+    filterMode  = 'relative';
+    filterHours = 5 / 60;
+    timeSel.value = '0';
+    customRangeBar.style.display = 'none';
+    setActiveTimeBtn(timeBtnEl5m);
     applyFilters();
   });
 
@@ -308,11 +365,12 @@
       allEntries.push(...newEntries);
       updateNewestTimestamp(newEntries);
 
-      const cutoff = filterHours > 0
-        ? (newestTimestamp > 0
-            ? newestTimestamp - filterHours * 3_600_000
-            : Date.now()     - filterHours * 3_600_000)
-        : 0;
+      let cutoff = 0;
+      if (filterMode === 'relative' && filterHours > 0) {
+        cutoff = newestTimestamp > 0
+          ? newestTimestamp - filterHours * 3_600_000
+          : Date.now()     - filterHours * 3_600_000;
+      }
       const newMatches = newEntries.filter(e => matchesFilters(e, cutoff));
 
       if (newMatches.length > 0) {

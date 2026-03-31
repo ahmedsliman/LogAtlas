@@ -187,12 +187,21 @@ export class LogAtlasEditorProvider implements vscode.CustomTextEditorProvider {
       <option value="DEBUG">DEBUG</option>
     </select>
     <input id="search-input" type="text" placeholder="Search message, URL, IP\u2026">
+    <button class="quick-time-btn" id="time-btn-1m">1m</button>
+    <button class="quick-time-btn" id="time-btn-5m">5m</button>
     <select id="time-filter">
       <option value="0">All time</option>
       <option value="1">Last 1h</option>
       <option value="24">Last 24h</option>
       <option value="168">Last 7d</option>
+      <option value="-1">Custom\u2026</option>
     </select>
+  </div>
+  <div id="custom-range-bar" style="display:none">
+    <span class="custom-range-label">From:</span>
+    <input type="datetime-local" id="range-start">
+    <span class="custom-range-label">To:</span>
+    <input type="datetime-local" id="range-end">
   </div>
   <div id="scroller-container">
     <div id="spacer"></div>
