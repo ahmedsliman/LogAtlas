@@ -28,6 +28,7 @@
   let filterMode       = 'relative'; // 'relative' | 'custom'
   let filterRangeStart = 0;          // ms epoch, 0 = no lower bound
   let filterRangeEnd   = 0;          // ms epoch, 0 = no upper bound
+  let sortOrder = /** @type {'asc'|'desc'} */ ('asc');
 
   // ── DOM refs ────────────────────────────────────────────────────────────
   const scrollerEl  = /** @type {HTMLElement} */ (document.getElementById('scroller-container'));
@@ -42,6 +43,7 @@
   const customRangeBar = /** @type {HTMLElement} */    (document.getElementById('custom-range-bar'));
   const rangeStartEl   = /** @type {HTMLInputElement} */(document.getElementById('range-start'));
   const rangeEndEl     = /** @type {HTMLInputElement} */(document.getElementById('range-end'));
+  const sortToggleBtn  = /** @type {HTMLElement} */    (document.getElementById('sort-toggle'));
 
   // ── Filter helpers ────────────────────────────────────────────────────────────
   /** @param {any} e @param {number} cutoff */
@@ -85,6 +87,12 @@
         : Date.now()     - filterHours * 3_600_000;
     }
     filteredEntries = allEntries.filter(e => matchesFilters(e, cutoff));
+    filteredEntries.sort((a, b) => {
+      if (!a.timestamp) return 1;
+      if (!b.timestamp) return -1;
+      const cmp = a.timestamp < b.timestamp ? -1 : a.timestamp > b.timestamp ? 1 : 0;
+      return sortOrder === 'asc' ? cmp : -cmp;
+    });
     rebuildHeights();
     render();
     updateStatus();
@@ -325,6 +333,12 @@
 
   rangeEndEl.addEventListener('change', () => {
     filterRangeEnd = rangeEndEl.value ? new Date(rangeEndEl.value).getTime() : 0;
+    applyFilters();
+  });
+
+  sortToggleBtn.addEventListener('click', () => {
+    sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    sortToggleBtn.textContent = sortOrder === 'asc' ? '\u2191 Time' : '\u2193 Time';
     applyFilters();
   });
 

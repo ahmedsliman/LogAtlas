@@ -248,3 +248,20 @@ mark {
   font-size: 11px;
   outline-color: var(--vscode-focusBorder);
 }
+
+/* ── Sort toggle button ───────────────────────────────────── */
+#sort-toggle {
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border, transparent);
+  padding: 3px 8px;
+  border-radius: 2px;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+#sort-toggle:hover {
+  background: var(--vscode-list-hoverBackground);
+}
