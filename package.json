@@ -2,7 +2,7 @@
   "name": "logatlas",
   "displayName": "LogAtlas",
   "description": "Fast, filterable log viewer for PHP/web developers. Supports Laravel, Nginx, and Apache logs.",
-  "version": "0.1.4",
+  "version": "0.1.6",
   "publisher": "logatlas",
   "icon": "icon-small.png",
   "license": "MIT",
