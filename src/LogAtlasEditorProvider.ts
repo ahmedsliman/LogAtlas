@@ -196,6 +196,8 @@ export class LogAtlasEditorProvider implements vscode.CustomTextEditorProvider {
       <option value="168">Last 7d</option>
       <option value="-1">Custom\u2026</option>
     </select>
+    <button id="sort-toggle" title="Toggle sort order">\u2191 Time</button>
+    <button id="display-toggle" title="Toggle Raw / Visual display">Raw</button>
   </div>
   <div id="custom-range-bar" style="display:none">
     <span class="custom-range-label">From:</span>

@@ -29,6 +29,7 @@
   let filterRangeStart = 0;          // ms epoch, 0 = no lower bound
   let filterRangeEnd   = 0;          // ms epoch, 0 = no upper bound
   let sortOrder = /** @type {'asc'|'desc'} */ ('asc');
+  let displayMode = /** @type {'raw'|'visual'} */ ('raw');
 
   // ── DOM refs ────────────────────────────────────────────────────────────
   const scrollerEl  = /** @type {HTMLElement} */ (document.getElementById('scroller-container'));
@@ -44,6 +45,7 @@
   const rangeStartEl   = /** @type {HTMLInputElement} */(document.getElementById('range-start'));
   const rangeEndEl     = /** @type {HTMLInputElement} */(document.getElementById('range-end'));
   const sortToggleBtn  = /** @type {HTMLElement} */    (document.getElementById('sort-toggle'));
+  const displayToggleBtn = /** @type {HTMLElement} */ (document.getElementById('display-toggle'));
 
   // ── Filter helpers ────────────────────────────────────────────────────────────
   /** @param {any} e @param {number} cutoff */
@@ -182,7 +184,16 @@
 
     const msgSpan = document.createElement('span');
     msgSpan.className = 'log-message';
-    appendHighlighted(msgSpan, entry.message || '', filterSearch);
+    if (displayMode === 'visual') {
+      try {
+        const parsed = JSON.parse(entry.message || '');
+        msgSpan.appendChild(buildJsonTree(parsed, 0));
+      } catch {
+        appendHighlighted(msgSpan, entry.message || '', filterSearch);
+      }
+    } else {
+      appendHighlighted(msgSpan, entry.message || '', filterSearch);
+    }
 
     if (entry.ip) {
       const ipSpan = document.createElement('span');
@@ -265,6 +276,62 @@
     }
   }
 
+  /**
+   * Recursively build a JSON tree using safe DOM creation (no innerHTML).
+   * Only called for entries currently visible in the viewport via buildRow().
+   * @param {any} value
+   * @param {number} depth
+   * @returns {HTMLElement}
+   */
+  function buildJsonTree(value, depth) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'json-tree';
+
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      for (const [k, v] of Object.entries(value)) {
+        const line = document.createElement('div');
+        line.style.paddingLeft = (depth * 12) + 'px';
+        const keyEl = document.createElement('span');
+        keyEl.className = 'json-key';
+        keyEl.textContent = k + ': ';
+        line.appendChild(keyEl);
+        if (v !== null && typeof v === 'object') {
+          line.appendChild(buildJsonTree(v, depth + 1));
+        } else {
+          const valEl = document.createElement('span');
+          valEl.className = 'json-value json-' + (v === null ? 'null' : typeof v);
+          valEl.textContent = JSON.stringify(v);
+          line.appendChild(valEl);
+        }
+        wrapper.appendChild(line);
+      }
+    } else if (Array.isArray(value)) {
+      value.forEach((item, i) => {
+        const line = document.createElement('div');
+        line.style.paddingLeft = (depth * 12) + 'px';
+        const idxEl = document.createElement('span');
+        idxEl.className = 'json-key';
+        idxEl.textContent = String(i) + ': ';
+        line.appendChild(idxEl);
+        if (item !== null && typeof item === 'object') {
+          line.appendChild(buildJsonTree(item, depth + 1));
+        } else {
+          const valEl = document.createElement('span');
+          valEl.className = 'json-value json-' + (item === null ? 'null' : typeof item);
+          valEl.textContent = JSON.stringify(item);
+          line.appendChild(valEl);
+        }
+        wrapper.appendChild(line);
+      });
+    } else {
+      const valEl = document.createElement('span');
+      valEl.className = 'json-value json-' + (value === null ? 'null' : typeof value);
+      valEl.textContent = JSON.stringify(value);
+      wrapper.appendChild(valEl);
+    }
+    return wrapper;
+  }
+
   // ── Expand / collapse ────────────────────────────────────────────────────
   /** @param {number} id */
   function toggleExpand(id) {
@@ -341,6 +408,13 @@
     sortToggleBtn.textContent = sortOrder === 'asc' ? '\u2191 Time' : '\u2193 Time';
     sortToggleBtn.setAttribute('aria-pressed', String(sortOrder === 'desc'));
     applyFilters();
+  });
+
+  displayToggleBtn.addEventListener('click', () => {
+    displayMode = displayMode === 'raw' ? 'visual' : 'raw';
+    displayToggleBtn.textContent = displayMode === 'raw' ? 'Raw' : 'Visual';
+    displayToggleBtn.classList.toggle('active', displayMode === 'visual');
+    render();
   });
 
   /** @param {HTMLElement|null} activeBtn */

@@ -265,3 +265,54 @@ mark {
 #sort-toggle:hover {
   background: var(--vscode-list-hoverBackground);
 }
+
+/* ── Display toggle button ────────────────────────────────── */
+#display-toggle {
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border, transparent);
+  padding: 3px 8px;
+  border-radius: 2px;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+#display-toggle:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+#display-toggle.active {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border-color: var(--vscode-button-background);
+}
+
+/* ── JSON visual tree ─────────────────────────────────────── */
+.json-tree {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.json-key {
+  color: var(--vscode-textLink-foreground);
+}
+
+.json-value.json-string {
+  color: var(--vscode-gitDecoration-addedResourceForeground, #89d185);
+}
+
+.json-value.json-number {
+  color: var(--vscode-debugTokenExpression-number, #b5cea8);
+}
+
+.json-value.json-boolean {
+  color: var(--vscode-debugTokenExpression-boolean, #569cd6);
+}
+
+.json-value.json-null {
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}
