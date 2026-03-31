@@ -309,8 +309,10 @@
       filterHours = 0;
       customRangeBar.style.display = 'flex';
     } else {
-      filterMode  = 'relative';
-      filterHours = parseInt(timeSel.value, 10) || 0;
+      filterMode       = 'relative';
+      filterHours      = parseInt(timeSel.value, 10) || 0;
+      filterRangeStart = 0;
+      filterRangeEnd   = 0;
       customRangeBar.style.display = 'none';
     }
     applyFilters();
@@ -364,6 +366,13 @@
       const newEntries = msg.entries || [];
       allEntries.push(...newEntries);
       updateNewestTimestamp(newEntries);
+
+      // For short relative windows (1m/5m), the cutoff shifts as newestTimestamp
+      // advances with each chunk. Re-validate the full list to avoid stale entries.
+      if (filterMode === 'relative' && filterHours > 0 && filterHours <= 5 / 60) {
+        applyFilters();
+        return;
+      }
 
       let cutoff = 0;
       if (filterMode === 'relative' && filterHours > 0) {
