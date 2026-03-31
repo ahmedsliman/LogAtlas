@@ -339,6 +339,7 @@
   sortToggleBtn.addEventListener('click', () => {
     sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
     sortToggleBtn.textContent = sortOrder === 'asc' ? '\u2191 Time' : '\u2193 Time';
+    sortToggleBtn.setAttribute('aria-pressed', String(sortOrder === 'desc'));
     applyFilters();
   });
 
@@ -384,6 +385,13 @@
       // For short relative windows (1m/5m), the cutoff shifts as newestTimestamp
       // advances with each chunk. Re-validate the full list to avoid stale entries.
       if (filterMode === 'relative' && filterHours > 0 && filterHours <= 5 / 60) {
+        applyFilters();
+        return;
+      }
+
+      // DESC order: new entries may belong anywhere in the sorted sequence, not
+      // just at the tail. Fall back to full applyFilters() to maintain sort invariant.
+      if (sortOrder === 'desc') {
         applyFilters();
         return;
       }
