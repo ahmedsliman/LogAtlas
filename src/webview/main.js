@@ -25,6 +25,12 @@
   let filterSearch = '';
   let filterHours  = 0;
   let newestTimestamp = 0;
+  let filterMode       = 'relative'; // 'relative' | 'custom'
+  let filterRangeStart = 0;          // ms epoch, 0 = no lower bound
+  let filterRangeEnd   = 0;          // ms epoch, 0 = no upper bound
+  let sortOrder = /** @type {'asc'|'desc'} */ ('asc');
+  let displayMode = /** @type {'raw'|'visual'} */ ('raw');
+  let selectedEntryId = /** @type {number|null} */ (null);
 
   // ── DOM refs ────────────────────────────────────────────────────────────
   const scrollerEl  = /** @type {HTMLElement} */ (document.getElementById('scroller-container'));
@@ -34,6 +40,19 @@
   const searchInput = /** @type {HTMLInputElement} */ (document.getElementById('search-input'));
   const timeSel     = /** @type {HTMLSelectElement} */ (document.getElementById('time-filter'));
   const statusBar   = /** @type {HTMLElement} */ (document.getElementById('status-bar'));
+  const timeBtnEl1m    = /** @type {HTMLElement} */    (document.getElementById('time-btn-1m'));
+  const timeBtnEl5m    = /** @type {HTMLElement} */    (document.getElementById('time-btn-5m'));
+  const customRangeBar = /** @type {HTMLElement} */    (document.getElementById('custom-range-bar'));
+  const rangeStartEl   = /** @type {HTMLInputElement} */(document.getElementById('range-start'));
+  const rangeEndEl     = /** @type {HTMLInputElement} */(document.getElementById('range-end'));
+  const sortToggleBtn  = /** @type {HTMLElement} */    (document.getElementById('sort-toggle'));
+  const displayToggleBtn = /** @type {HTMLElement} */ (document.getElementById('display-toggle'));
+  const detailPanel     = /** @type {HTMLElement} */    (document.getElementById('detail-panel'));
+  const detailBadge     = /** @type {HTMLElement} */    (document.getElementById('detail-badge'));
+  const detailTimestamp = /** @type {HTMLElement} */    (document.getElementById('detail-timestamp'));
+  const detailCloseBtn  = /** @type {HTMLElement} */    (document.getElementById('detail-close'));
+  const detailRaw       = /** @type {HTMLElement} */    (document.getElementById('detail-raw'));
+  const detailContext   = /** @type {HTMLElement} */    (document.getElementById('detail-context'));
 
   // ── Filter helpers ────────────────────────────────────────────────────────────
   /** @param {any} e @param {number} cutoff */
@@ -46,9 +65,14 @@
         (e.ip      && e.ip.toLowerCase().includes(filterSearch));
       if (!hit) return false;
     }
-    if (filterHours > 0) {
+    if (filterMode === 'relative' && filterHours > 0) {
       if (!e.timestamp) return false;
       if (new Date(e.timestamp).getTime() < cutoff) return false;
+    } else if (filterMode === 'custom') {
+      if (!e.timestamp) return false;
+      const t = new Date(e.timestamp).getTime();
+      if (filterRangeStart > 0 && t < filterRangeStart) return false;
+      if (filterRangeEnd   > 0 && t > filterRangeEnd)   return false;
     }
     return true;
   }
@@ -65,12 +89,19 @@
 
   // ── Filtering ────────────────────────────────────────────────────────────
   function applyFilters() {
-    const cutoff = filterHours > 0
-      ? (newestTimestamp > 0
-          ? newestTimestamp - filterHours * 3_600_000
-          : Date.now()   - filterHours * 3_600_000)
-      : 0;
+    let cutoff = 0;
+    if (filterMode === 'relative' && filterHours > 0) {
+      cutoff = newestTimestamp > 0
+        ? newestTimestamp - filterHours * 3_600_000
+        : Date.now()     - filterHours * 3_600_000;
+    }
     filteredEntries = allEntries.filter(e => matchesFilters(e, cutoff));
+    filteredEntries.sort((a, b) => {
+      if (!a.timestamp) return 1;
+      if (!b.timestamp) return -1;
+      const cmp = a.timestamp < b.timestamp ? -1 : a.timestamp > b.timestamp ? 1 : 0;
+      return sortOrder === 'asc' ? cmp : -cmp;
+    });
     rebuildHeights();
     render();
     updateStatus();
@@ -160,7 +191,16 @@
 
     const msgSpan = document.createElement('span');
     msgSpan.className = 'log-message';
-    appendHighlighted(msgSpan, entry.message || '', filterSearch);
+    if (displayMode === 'visual') {
+      try {
+        const parsed = JSON.parse(entry.message || '');
+        msgSpan.appendChild(buildJsonTree(parsed, 0));
+      } catch {
+        appendHighlighted(msgSpan, entry.message || '', filterSearch);
+      }
+    } else {
+      appendHighlighted(msgSpan, entry.message || '', filterSearch);
+    }
 
     if (entry.ip) {
       const ipSpan = document.createElement('span');
@@ -183,19 +223,26 @@
     main.appendChild(msgSpan);
     row.appendChild(main);
 
+    main.style.cursor = 'pointer';
+    main.addEventListener('click', () => openDetail(entry));
+    if (selectedEntryId === entry.id) {
+      row.classList.add('row-selected');
+    }
+
     // ── Stack trace toggle ─────────────────────────────────────────────────
     if (entry.context) {
       const toggle = document.createElement('div');
       toggle.className = 'log-context-toggle';
       const expanded = expandedIds.has(entry.id);
       toggle.textContent = (expanded ? '\u25BC' : '\u25BA') + ' Stack trace';
-      toggle.addEventListener('click', () => toggleExpand(entry.id));
+      toggle.addEventListener('click', (ev) => { ev.stopPropagation(); toggleExpand(entry.id); });
       toggle.setAttribute('role', 'button');
       toggle.setAttribute('tabindex', '0');
       toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
       toggle.addEventListener('keydown', (/** @type {KeyboardEvent} */ ev) => {
         if (ev.key === 'Enter' || ev.key === ' ') {
           ev.preventDefault();
+          ev.stopPropagation();
           toggleExpand(entry.id);
         }
       });
@@ -243,6 +290,62 @@
     }
   }
 
+  /**
+   * Recursively build a JSON tree using safe DOM creation (no innerHTML).
+   * Only called for entries currently visible in the viewport via buildRow().
+   * @param {any} value
+   * @param {number} depth
+   * @returns {HTMLElement}
+   */
+  function buildJsonTree(value, depth) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'json-tree';
+
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      for (const [k, v] of Object.entries(value)) {
+        const line = document.createElement('div');
+        line.style.paddingLeft = (depth * 12) + 'px';
+        const keyEl = document.createElement('span');
+        keyEl.className = 'json-key';
+        keyEl.textContent = k + ': ';
+        line.appendChild(keyEl);
+        if (v !== null && typeof v === 'object') {
+          line.appendChild(buildJsonTree(v, depth + 1));
+        } else {
+          const valEl = document.createElement('span');
+          valEl.className = 'json-value json-' + (v === null ? 'null' : typeof v);
+          valEl.textContent = JSON.stringify(v);
+          line.appendChild(valEl);
+        }
+        wrapper.appendChild(line);
+      }
+    } else if (Array.isArray(value)) {
+      value.forEach((item, i) => {
+        const line = document.createElement('div');
+        line.style.paddingLeft = (depth * 12) + 'px';
+        const idxEl = document.createElement('span');
+        idxEl.className = 'json-key';
+        idxEl.textContent = String(i) + ': ';
+        line.appendChild(idxEl);
+        if (item !== null && typeof item === 'object') {
+          line.appendChild(buildJsonTree(item, depth + 1));
+        } else {
+          const valEl = document.createElement('span');
+          valEl.className = 'json-value json-' + (item === null ? 'null' : typeof item);
+          valEl.textContent = JSON.stringify(item);
+          line.appendChild(valEl);
+        }
+        wrapper.appendChild(line);
+      });
+    } else {
+      const valEl = document.createElement('span');
+      valEl.className = 'json-value json-' + (value === null ? 'null' : typeof value);
+      valEl.textContent = JSON.stringify(value);
+      wrapper.appendChild(valEl);
+    }
+    return wrapper;
+  }
+
   // ── Expand / collapse ────────────────────────────────────────────────────
   /** @param {number} id */
   function toggleExpand(id) {
@@ -271,6 +374,30 @@
       loading;
   }
 
+  /** @param {any} entry */
+  function openDetail(entry) {
+    selectedEntryId = entry.id;
+    detailBadge.textContent = entry.level || 'UNKNOWN';
+    detailBadge.className   = 'log-level-badge level-' + (entry.level || 'unknown').toLowerCase();
+    detailTimestamp.textContent = entry.timestamp || '';
+    detailRaw.textContent = entry.raw || entry.message || '';
+    if (entry.context) {
+      detailContext.textContent = entry.context;
+      detailContext.style.display = 'block';
+    } else {
+      detailContext.textContent = '';
+      detailContext.style.display = 'none';
+    }
+    detailPanel.hidden = false;
+    render();
+  }
+
+  function closeDetail() {
+    selectedEntryId = null;
+    detailPanel.hidden = true;
+    render();
+  }
+
   // ── Event listeners ───────────────────────────────────────────────────────
   scrollerEl.addEventListener('scroll', render, { passive: true });
 
@@ -289,7 +416,72 @@
   });
 
   timeSel.addEventListener('change', () => {
-    filterHours = parseInt(timeSel.value, 10) || 0;
+    setActiveTimeBtn(null);
+    if (timeSel.value === '-1') {
+      filterMode  = 'custom';
+      filterHours = 0;
+      customRangeBar.style.display = 'flex';
+    } else {
+      filterMode       = 'relative';
+      filterHours      = parseInt(timeSel.value, 10) || 0;
+      filterRangeStart = 0;
+      filterRangeEnd   = 0;
+      customRangeBar.style.display = 'none';
+    }
+    applyFilters();
+  });
+
+  rangeStartEl.addEventListener('change', () => {
+    filterRangeStart = rangeStartEl.value ? new Date(rangeStartEl.value).getTime() : 0;
+    applyFilters();
+  });
+
+  rangeEndEl.addEventListener('change', () => {
+    filterRangeEnd = rangeEndEl.value ? new Date(rangeEndEl.value).getTime() : 0;
+    applyFilters();
+  });
+
+  sortToggleBtn.addEventListener('click', () => {
+    sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    sortToggleBtn.textContent = sortOrder === 'asc' ? '\u2191 Time' : '\u2193 Time';
+    sortToggleBtn.setAttribute('aria-pressed', String(sortOrder === 'desc'));
+    applyFilters();
+  });
+
+  displayToggleBtn.addEventListener('click', () => {
+    displayMode = displayMode === 'raw' ? 'visual' : 'raw';
+    displayToggleBtn.textContent = displayMode === 'raw' ? 'Raw' : 'Visual';
+    displayToggleBtn.classList.toggle('active', displayMode === 'visual');
+    render();
+  });
+
+  detailCloseBtn.addEventListener('click', closeDetail);
+
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && !detailPanel.hidden) closeDetail();
+  });
+
+  /** @param {HTMLElement|null} activeBtn */
+  function setActiveTimeBtn(activeBtn) {
+    [timeBtnEl1m, timeBtnEl5m].forEach(b => b.classList.remove('active'));
+    if (activeBtn) activeBtn.classList.add('active');
+  }
+
+  timeBtnEl1m.addEventListener('click', () => {
+    filterMode  = 'relative';
+    filterHours = 1 / 60;
+    timeSel.value = '0';
+    customRangeBar.style.display = 'none';
+    setActiveTimeBtn(timeBtnEl1m);
+    applyFilters();
+  });
+
+  timeBtnEl5m.addEventListener('click', () => {
+    filterMode  = 'relative';
+    filterHours = 5 / 60;
+    timeSel.value = '0';
+    customRangeBar.style.display = 'none';
+    setActiveTimeBtn(timeBtnEl5m);
     applyFilters();
   });
 
@@ -308,11 +500,26 @@
       allEntries.push(...newEntries);
       updateNewestTimestamp(newEntries);
 
-      const cutoff = filterHours > 0
-        ? (newestTimestamp > 0
-            ? newestTimestamp - filterHours * 3_600_000
-            : Date.now()     - filterHours * 3_600_000)
-        : 0;
+      // For short relative windows (1m/5m), the cutoff shifts as newestTimestamp
+      // advances with each chunk. Re-validate the full list to avoid stale entries.
+      if (filterMode === 'relative' && filterHours > 0 && filterHours <= 5 / 60) {
+        applyFilters();
+        return;
+      }
+
+      // DESC order: new entries may belong anywhere in the sorted sequence, not
+      // just at the tail. Fall back to full applyFilters() to maintain sort invariant.
+      if (sortOrder === 'desc') {
+        applyFilters();
+        return;
+      }
+
+      let cutoff = 0;
+      if (filterMode === 'relative' && filterHours > 0) {
+        cutoff = newestTimestamp > 0
+          ? newestTimestamp - filterHours * 3_600_000
+          : Date.now()     - filterHours * 3_600_000;
+      }
       const newMatches = newEntries.filter(e => matchesFilters(e, cutoff));
 
       if (newMatches.length > 0) {
