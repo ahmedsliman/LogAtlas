@@ -176,40 +176,55 @@ export class LogAtlasEditorProvider implements vscode.CustomTextEditorProvider {
   <title>LogAtlas</title>
 </head>
 <body>
-  <div id="filter-bar">
-    <select id="level-filter">
-      <option value="">All Levels</option>
-      <option value="ERROR">ERROR</option>
-      <option value="CRITICAL">CRITICAL</option>
-      <option value="WARNING">WARNING</option>
-      <option value="NOTICE">NOTICE</option>
-      <option value="INFO">INFO</option>
-      <option value="DEBUG">DEBUG</option>
-    </select>
-    <input id="search-input" type="text" placeholder="Search message, URL, IP\u2026">
-    <button class="quick-time-btn" id="time-btn-1m">1m</button>
-    <button class="quick-time-btn" id="time-btn-5m">5m</button>
-    <select id="time-filter">
-      <option value="0">All time</option>
-      <option value="1">Last 1h</option>
-      <option value="24">Last 24h</option>
-      <option value="168">Last 7d</option>
-      <option value="-1">Custom\u2026</option>
-    </select>
-    <button id="sort-toggle" title="Toggle sort order">\u2191 Time</button>
-    <button id="display-toggle" title="Toggle Raw / Visual display">Raw</button>
+  <div id="app-container">
+    <div id="main-panel">
+      <div id="filter-bar">
+        <select id="level-filter">
+          <option value="">All Levels</option>
+          <option value="ERROR">ERROR</option>
+          <option value="CRITICAL">CRITICAL</option>
+          <option value="WARNING">WARNING</option>
+          <option value="NOTICE">NOTICE</option>
+          <option value="INFO">INFO</option>
+          <option value="DEBUG">DEBUG</option>
+        </select>
+        <input id="search-input" type="text" placeholder="Search message, URL, IP\u2026">
+        <button class="quick-time-btn" id="time-btn-1m">1m</button>
+        <button class="quick-time-btn" id="time-btn-5m">5m</button>
+        <select id="time-filter">
+          <option value="0">All time</option>
+          <option value="1">Last 1h</option>
+          <option value="24">Last 24h</option>
+          <option value="168">Last 7d</option>
+          <option value="-1">Custom\u2026</option>
+        </select>
+        <button id="sort-toggle" title="Toggle sort order">\u2191 Time</button>
+        <button id="display-toggle" title="Toggle Raw / Visual display">Raw</button>
+      </div>
+      <div id="custom-range-bar" style="display:none">
+        <span class="custom-range-label">From:</span>
+        <input type="datetime-local" id="range-start">
+        <span class="custom-range-label">To:</span>
+        <input type="datetime-local" id="range-end">
+      </div>
+      <div id="scroller-container">
+        <div id="spacer"></div>
+        <div id="rows-container"></div>
+      </div>
+      <div id="status-bar">Loading\u2026</div>
+    </div>
+    <div id="detail-panel" hidden>
+      <div id="detail-header">
+        <span id="detail-badge" class="log-level-badge"></span>
+        <span id="detail-timestamp" class="log-timestamp"></span>
+        <button id="detail-close" title="Close (Esc)">\u2715</button>
+      </div>
+      <div id="detail-body">
+        <pre id="detail-raw"></pre>
+        <pre id="detail-context" style="display:none"></pre>
+      </div>
+    </div>
   </div>
-  <div id="custom-range-bar" style="display:none">
-    <span class="custom-range-label">From:</span>
-    <input type="datetime-local" id="range-start">
-    <span class="custom-range-label">To:</span>
-    <input type="datetime-local" id="range-end">
-  </div>
-  <div id="scroller-container">
-    <div id="spacer"></div>
-    <div id="rows-container"></div>
-  </div>
-  <div id="status-bar">Loading\u2026</div>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;

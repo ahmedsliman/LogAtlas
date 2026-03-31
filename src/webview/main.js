@@ -30,6 +30,7 @@
   let filterRangeEnd   = 0;          // ms epoch, 0 = no upper bound
   let sortOrder = /** @type {'asc'|'desc'} */ ('asc');
   let displayMode = /** @type {'raw'|'visual'} */ ('raw');
+  let selectedEntryId = /** @type {number|null} */ (null);
 
   // ── DOM refs ────────────────────────────────────────────────────────────
   const scrollerEl  = /** @type {HTMLElement} */ (document.getElementById('scroller-container'));
@@ -46,6 +47,12 @@
   const rangeEndEl     = /** @type {HTMLInputElement} */(document.getElementById('range-end'));
   const sortToggleBtn  = /** @type {HTMLElement} */    (document.getElementById('sort-toggle'));
   const displayToggleBtn = /** @type {HTMLElement} */ (document.getElementById('display-toggle'));
+  const detailPanel     = /** @type {HTMLElement} */    (document.getElementById('detail-panel'));
+  const detailBadge     = /** @type {HTMLElement} */    (document.getElementById('detail-badge'));
+  const detailTimestamp = /** @type {HTMLElement} */    (document.getElementById('detail-timestamp'));
+  const detailCloseBtn  = /** @type {HTMLElement} */    (document.getElementById('detail-close'));
+  const detailRaw       = /** @type {HTMLElement} */    (document.getElementById('detail-raw'));
+  const detailContext   = /** @type {HTMLElement} */    (document.getElementById('detail-context'));
 
   // ── Filter helpers ────────────────────────────────────────────────────────────
   /** @param {any} e @param {number} cutoff */
@@ -216,19 +223,26 @@
     main.appendChild(msgSpan);
     row.appendChild(main);
 
+    main.style.cursor = 'pointer';
+    main.addEventListener('click', () => openDetail(entry));
+    if (selectedEntryId === entry.id) {
+      row.classList.add('row-selected');
+    }
+
     // ── Stack trace toggle ─────────────────────────────────────────────────
     if (entry.context) {
       const toggle = document.createElement('div');
       toggle.className = 'log-context-toggle';
       const expanded = expandedIds.has(entry.id);
       toggle.textContent = (expanded ? '\u25BC' : '\u25BA') + ' Stack trace';
-      toggle.addEventListener('click', () => toggleExpand(entry.id));
+      toggle.addEventListener('click', (ev) => { ev.stopPropagation(); toggleExpand(entry.id); });
       toggle.setAttribute('role', 'button');
       toggle.setAttribute('tabindex', '0');
       toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
       toggle.addEventListener('keydown', (/** @type {KeyboardEvent} */ ev) => {
         if (ev.key === 'Enter' || ev.key === ' ') {
           ev.preventDefault();
+          ev.stopPropagation();
           toggleExpand(entry.id);
         }
       });
@@ -360,6 +374,30 @@
       loading;
   }
 
+  /** @param {any} entry */
+  function openDetail(entry) {
+    selectedEntryId = entry.id;
+    detailBadge.textContent = entry.level || 'UNKNOWN';
+    detailBadge.className   = 'log-level-badge level-' + (entry.level || 'unknown').toLowerCase();
+    detailTimestamp.textContent = entry.timestamp || '';
+    detailRaw.textContent = entry.raw || entry.message || '';
+    if (entry.context) {
+      detailContext.textContent = entry.context;
+      detailContext.style.display = 'block';
+    } else {
+      detailContext.textContent = '';
+      detailContext.style.display = 'none';
+    }
+    detailPanel.hidden = false;
+    render();
+  }
+
+  function closeDetail() {
+    selectedEntryId = null;
+    detailPanel.hidden = true;
+    render();
+  }
+
   // ── Event listeners ───────────────────────────────────────────────────────
   scrollerEl.addEventListener('scroll', render, { passive: true });
 
@@ -415,6 +453,12 @@
     displayToggleBtn.textContent = displayMode === 'raw' ? 'Raw' : 'Visual';
     displayToggleBtn.classList.toggle('active', displayMode === 'visual');
     render();
+  });
+
+  detailCloseBtn.addEventListener('click', closeDetail);
+
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && !detailPanel.hidden) closeDetail();
   });
 
   /** @param {HTMLElement|null} activeBtn */
