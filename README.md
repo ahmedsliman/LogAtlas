@@ -1,12 +1,18 @@
 # LogAtlas
 
-**Stop reading raw log files. Start understanding them.**
+**Your log files, finally readable.**
 
 LogAtlas replaces VS Code's default text view for `.log` files with a purpose-built viewer — auto-parsed, colour-coded, and filterable without leaving your editor.
 
 [![VS Code](https://img.shields.io/badge/VS%20Code-1.85+-blue?logo=visualstudiocode&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=logatlas.logatlas)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE.md)
 [![Version](https://img.shields.io/badge/version-0.1.1-orange)]()
+
+---
+
+![LogAtlas screenshot — dark theme](images/screenshot-1.png)
+
+![LogAtlas screenshot — filter bar](images/screenshot-2.png)
 
 ---
 
@@ -52,19 +58,6 @@ More formats coming — see the roadmap below.
 
 ---
 
-## Roadmap
-
-See [ROADMAP.md](ROADMAP.md).
-
----
-
-## Contributing
-
-Bug reports, feature requests, and new parser contributions are welcome.
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions and the parser guide.
-
----
-
 ## License
 
-[MIT](LICENSE.md) © 2026 Ahmed Soliman
+MIT © 2026 Ahmed Soliman
